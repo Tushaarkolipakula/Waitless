@@ -133,14 +133,16 @@ def get_menu_item(item_id):
     return None
 
 # Helper to get user ID from session
-def get_user_id():
-    """Retrieves the user ID from the session. Returns None if not logged in."""
+def get_user_id(email=None):
+    """Retrieves the user ID from the session or a given email."""
+    if email:
+        return email.replace('.', '_').replace('@', '_')
     email = session.get('email')
     if email:
-        # For simplicity, using email as user ID. In a real app, you'd use Firebase Auth UID.
         return email.replace('.', '_').replace('@', '_')
     print("get_user_id: User not logged in, returning None.")
     return None
+
 
 # Helper to get user data from email
 def get_user_data_by_email(email):
@@ -399,29 +401,27 @@ def get_cart():
 # --- Place Order Route ---
 @app.route('/api/place_order', methods=['POST'])
 def place_order():
-    user_id = get_user_id()
+    data = request.get_json()
+    user_email = data.get('user_email')  # frontend sends this
+    user_id = get_user_id(user_email)    # will use frontend email if provided
+
     if not user_id:
         return jsonify(success=False, message="Unauthorized"), 401
 
-    data = request.get_json()
     cart_items = data.get('cart_items', [])
     if not cart_items:
         return jsonify(success=False, message="Cart is empty"), 400
 
+    # --- rest of your existing code remains exactly the same ---
     total_preparation_time = sum(item.get('preparation_time', 5) for item in cart_items)
     total_price = sum(item.get('price', 0) * item.get('quantity', 1) for item in cart_items)
 
-    # --- calculate queue position ---
     pending_orders = db.collection('orders').where("status", "==", "pending").order_by("order_time").stream()
     pending_orders_list = list(pending_orders)
 
-    # number of orders already pending
     people_ahead = len(pending_orders_list)
-
-    # average wait time = sum of all pending prep times
     avg_wait_time = sum(order.to_dict().get("total_preparation_time", 0) for order in pending_orders_list)
 
-    # create new order
     order_ref = db.collection('orders').document()
     order_ref.set({
         "user_id": user_id,
@@ -435,11 +435,9 @@ def place_order():
         "avg_wait_time": avg_wait_time
     })
 
-    # Clear cart
     db.collection('carts').document(user_id).set({"items": {}})
 
     return jsonify(success=True, message="Order placed successfully", order_id=order_ref.id), 200
-
 
 
 @app.route('/api/dashboard_data')
