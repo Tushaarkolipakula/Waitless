@@ -481,6 +481,25 @@ def dashboard_data():
                 user_latest_order = order
                 user_latest_order["status"] = current_status  # include updated status
 
+        # Calculate people ahead and estimated wait time
+        if user_latest_order:
+            orders_queue = sorted(
+            [o.to_dict() for o in orders_ref.stream()],
+            key=lambda x: x.get("order_time", 0)
+        )
+
+        people_ahead = 0
+        estimated_user_wait_time = 0
+
+        for o in orders_queue:
+        # Only count pending or preparing orders
+            if o.get("status") in ["pending", "preparing"]:
+                if o.get("user_id") == user_id and o == user_latest_order:
+                    break  # Stop when we reach user's latest order
+                people_ahead += 1
+                estimated_user_wait_time += o.get("total_preparation_time", 5)  # default 5 mins if missing
+
+
     return jsonify({
         "total_orders_count": total_orders_count,
         "pending_orders_count": pending_orders_count,
