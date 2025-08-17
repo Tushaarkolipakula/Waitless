@@ -416,7 +416,18 @@ def place_order():
     total_preparation_time = sum(item.get('preparation_time', 5) for item in cart_items)
     total_price = sum(item.get('price', 0) * item.get('quantity', 1) for item in cart_items)
 
-    pending_orders = db.collection('orders').where("status", "==", "pending").order_by("order_time").stream()
+    pending_orders = [
+    order for order in db.collection('orders').order_by("order_time").stream()
+    if order.to_dict().get('status', '').lower() == 'pending'
+            ]
+    pending_orders_count = len(pending_orders)
+
+
+    pending_orders_count = len([
+    order for order in db.collection('orders').order_by("order_time").stream()
+    if order.to_dict().get('status', '').lower() == 'pending'
+                                ])
+
     pending_orders_list = list(pending_orders)
 
     people_ahead = len(pending_orders_list)
