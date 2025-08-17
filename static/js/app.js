@@ -412,7 +412,11 @@ document.addEventListener("DOMContentLoaded", function () {
                             const placeOrderResponse = await fetch("/api/place_order", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ cart_items: items }), // Send the actual cart items
+                                body: JSON.stringify({
+                                cart_items: items,
+                                user_email: localStorage.getItem("userEmail") // or session email
+                            }),
+
                             });
 
                             if (!placeOrderResponse.ok) {
