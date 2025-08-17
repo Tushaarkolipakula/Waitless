@@ -396,8 +396,9 @@ def get_cart():
     print(f"get_cart: No cart found for user {user_id}.")
     return jsonify(success=True, cart_items=[], total_price=0), 200
 
-@app.route('/checkout', methods=['POST'])
-def checkout():
+# --- Place Order Route ---
+@app.route('/api/place_order', methods=['POST'])
+def place_order():
     user_id = get_user_id()
     if not user_id:
         return jsonify(success=False, message="Unauthorized"), 401
@@ -407,11 +408,9 @@ def checkout():
     if not cart_items:
         return jsonify(success=False, message="Cart is empty"), 400
 
-    # Calculate total preparation time or total price if needed
     total_preparation_time = sum(item.get('preparation_time', 5) for item in cart_items)
     total_price = sum(item.get('price', 0) * item.get('quantity', 1) for item in cart_items)
 
-    # Create order in Firestore
     order_ref = db.collection('orders').document()
     order_ref.set({
         "user_id": user_id,
@@ -423,10 +422,11 @@ def checkout():
         "estimated_completion_time": int(time.time()) + total_preparation_time * 60
     })
 
-    # Clear user's cart
+    # Clear cart
     db.collection('carts').document(user_id).set({"items": {}})
 
     return jsonify(success=True, message="Order placed successfully", order_id=order_ref.id), 200
+
 
 
 @app.route('/api/dashboard_data')
