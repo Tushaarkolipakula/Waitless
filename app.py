@@ -402,8 +402,8 @@ def get_cart():
 @app.route('/api/place_order', methods=['POST'])
 def place_order():
     data = request.get_json()
-    user_email = data.get('user_email')  # frontend sends this
-    user_id = get_user_id(user_email)    # will use frontend email if provided
+    user_email = data.get('user_email')
+    user_id = get_user_id(user_email)
 
     if not user_id:
         return jsonify(success=False, message="Unauthorized"), 401
@@ -412,43 +412,56 @@ def place_order():
     if not cart_items:
         return jsonify(success=False, message="Cart is empty"), 400
 
-    # --- rest of your existing code remains exactly the same ---
-    total_preparation_time = sum(item.get('preparation_time', 5) for item in cart_items)
+    total_prep_time = sum(item.get('preparation_time', 5) for item in cart_items)  # minutes
     total_price = sum(item.get('price', 0) * item.get('quantity', 1) for item in cart_items)
 
-    pending_orders = [
-    order for order in db.collection('orders').order_by("order_time").stream()
-    if order.to_dict().get('status', '').lower() == 'pending'
-            ]
-    pending_orders_count = len(pending_orders)
+    orders_ref = db.collection('orders')
 
+    # Orders currently in queue (pending + preparing)
+    pending_preparing_docs = list(
+        orders_ref.where('status', 'in', ['pending', 'preparing']).stream()
+    )
+    queue_orders = [o.to_dict() for o in pending_preparing_docs]
 
-    pending_orders_count = len([
-    order for order in db.collection('orders').order_by("order_time").stream()
-    if order.to_dict().get('status', '').lower() == 'pending'
-                                ])
+    people_ahead = len(queue_orders)
+    queue_wait_time = sum(o.get('total_preparation_time', 5) for o in queue_orders)  # minutes
 
-    pending_orders_list = list(pending_orders)
+    transaction = db.transaction()
 
-    people_ahead = len(pending_orders_list)
-    avg_wait_time = sum(order.to_dict().get("total_preparation_time", 0) for order in pending_orders_list)
+    @firestore.transactional
+    def create_order(tx):
+        order_ref = orders_ref.document()
+        order_time = int(time.time())  # seconds epoch
 
-    order_ref = db.collection('orders').document()
-    order_ref.set({
-        "user_id": user_id,
-        "items": cart_items,
-        "total_price": total_price,
-        "total_preparation_time": total_preparation_time,
-        "status": "pending",
-        "order_time": int(time.time()),
-        "estimated_completion_time": int(time.time()) + (avg_wait_time + total_preparation_time) * 60,
-        "people_ahead": people_ahead,
-        "avg_wait_time": avg_wait_time
-    })
+        estimated_start_time = order_time + int(queue_wait_time * 60)  # seconds
+        estimated_completion_time = estimated_start_time + int(total_prep_time * 60)  # seconds
 
+        order_data = {
+            "user_id": user_id,
+            "items": cart_items,
+            "total_price": total_price,
+            "total_preparation_time": total_prep_time,     # minutes
+            "status": "pending",
+            "order_time": order_time,
+            "estimated_start_time": estimated_start_time,  # NEW
+            "estimated_completion_time": estimated_completion_time,
+            "people_ahead": people_ahead,
+            "queue_wait_time": queue_wait_time,            # minutes; historical snapshot
+        }
+
+        tx.set(order_ref, order_data)
+        return order_ref.id
+
+    try:
+        order_id = create_order(transaction)
+    except Exception as e:
+        return jsonify(success=False, message=f"Failed to place order: {e}"), 500
+
+    # Clear cart
     db.collection('carts').document(user_id).set({"items": {}})
 
-    return jsonify(success=True, message="Order placed successfully", order_id=order_ref.id), 200
+    return jsonify(success=True, message="Order placed successfully", order_id=order_id), 200
+
 
 
 @app.route('/api/dashboard_data')
@@ -458,69 +471,85 @@ def dashboard_data():
         return jsonify(success=False, message="Unauthorized"), 401
 
     orders_ref = db.collection('orders')
-    orders = orders_ref.stream()
+    now = int(time.time())
+    all_docs = list(orders_ref.stream())
 
     total_orders_count = 0
     pending_orders_count = 0
     preparing_orders_count = 0
     completed_orders_count = 0
-    user_latest_order = None
-    people_ahead = 0
-    estimated_user_wait_time = 0
+    updated_orders = []
 
-    now = int(time.time())  # current time in seconds
+    for doc in all_docs:
+        order = doc.to_dict()
+        order_id = doc.id
 
-    for order_doc in orders:
-        order = order_doc.to_dict()
-        total_orders_count += 1
-
-        # --- Auto update statuses ---
+        status = order.get("status", "pending")
+        est_start = order.get("estimated_start_time")
         est_completion = order.get("estimated_completion_time")
-        order_id = order_doc.id
-        current_status = order.get("status", "pending")
+        total_prep_minutes = order.get("total_preparation_time", 5)
 
-        if est_completion:
-            if now >= est_completion and current_status != "completed":
-                # mark completed if time has passed
-                db.collection("orders").document(order_id).update({"status": "completed"})
-                current_status = "completed"
-            elif now < est_completion and current_status == "pending":
-                # move to preparing once it's started
-                db.collection("orders").document(order_id).update({"status": "preparing"})
-                current_status = "preparing"
+        # Fallback for older orders (no start time saved yet)
+        if not est_start and est_completion and total_prep_minutes:
+            est_start = est_completion - int(total_prep_minutes * 60)
 
-        # Count by status
-        if current_status == "pending":
+        # Derive correct status from time windows
+        new_status = status
+        if est_completion and now >= est_completion:
+            new_status = "completed"
+        elif est_start and now >= est_start and now < (est_completion or 9_999_999_999):
+            new_status = "preparing"
+        else:
+            new_status = "pending"
+
+        # Persist only if changed
+        if new_status != status:
+            orders_ref.document(order_id).update({"status": new_status})
+
+        order["status"] = new_status
+        order["order_id"] = order_id
+        order["estimated_start_time"] = est_start
+        updated_orders.append(order)
+
+        total_orders_count += 1
+        if new_status == "pending":
             pending_orders_count += 1
-        elif current_status == "preparing":
+        elif new_status == "preparing":
             preparing_orders_count += 1
-        elif current_status == "completed":
+        elif new_status == "completed":
             completed_orders_count += 1
 
-        # Track user's latest order
-        if order.get("user_id") == user_id:
-            if not user_latest_order or order["order_time"] > user_latest_order["order_time"]:
-                user_latest_order = order
-                user_latest_order["status"] = current_status  # include updated status
+    # Latest order for this user
+    user_orders = [o for o in updated_orders if o.get("user_id") == user_id]
+    user_latest_order = max(user_orders, key=lambda x: x.get("order_time", 0)) if user_orders else None
 
-        # Calculate people ahead and estimated wait time
-        if user_latest_order:
-            orders_queue = sorted(
-            [o.to_dict() for o in orders_ref.stream()],
-            key=lambda x: x.get("order_time", 0)
-        )
+    # People ahead + estimated wait time (mins) based on estimated_start_time
+    people_ahead = 0
+    estimated_user_wait_time = 0
+    if user_latest_order:
+        # Only consider orders still in the queue (pending or preparing)
+        queue_orders = [o for o in updated_orders if o["status"] in ["pending", "preparing"]]
 
-        people_ahead = 0
-        estimated_user_wait_time = 0
+        # Sort by estimated start time, fallback to order_time
+        def start_key(o):
+            s = o.get("estimated_start_time")
+            return (s if s else o.get("order_time", 0), o.get("order_time", 0))
 
-        for o in orders_queue:
-        # Only count pending or preparing orders
-            if o.get("status") in ["pending", "preparing"]:
-                if o.get("user_id") == user_id and o == user_latest_order:
-                    break  # Stop when we reach user's latest order
-                people_ahead += 1
-                estimated_user_wait_time += o.get("total_preparation_time", 5)  # default 5 mins if missing
+        queue_orders.sort(key=start_key)
 
+        # Count and sum prep times of orders before the user's
+        for o in queue_orders:
+            if o["order_id"] == user_latest_order["order_id"]:
+                break
+            people_ahead += 1
+            estimated_user_wait_time += int(o.get("total_preparation_time", 5))
+
+        # If user's start time is in the future, ensure wait >= 0 by using time delta too
+        user_start = user_latest_order.get("estimated_start_time")
+        if user_start and now < user_start:
+            # More accurate: minutes until your start
+            eta_minutes = max(0, (user_start - now) // 60)
+            estimated_user_wait_time = max(estimated_user_wait_time, eta_minutes)
 
     return jsonify({
         "total_orders_count": total_orders_count,
@@ -528,116 +557,46 @@ def dashboard_data():
         "preparing_orders_count": preparing_orders_count,
         "completed_orders_count": completed_orders_count,
         "people_ahead": people_ahead,
-        "estimated_user_wait_time": estimated_user_wait_time,
-        "user_latest_order": user_latest_order
+        "estimated_user_wait_time": int(estimated_user_wait_time),
+        "user_latest_order": user_latest_order,
     })
 
 
-@app.route('/api/dashboard_data', methods=['GET'])
-def get_dashboard_data():
-    user_id = get_user_id()
-    if not user_id:
-        print("get_dashboard_data: User not logged in, returning 401.")
-        return jsonify(success=False, message="Unauthorized"), 401
-
+@app.route('/api/update_order_statuses')
+def update_order_statuses():
+    now = int(time.time())
     orders_ref = db.collection('orders')
 
-    all_user_orders = orders_ref.where('user_id', '==', user_id).get()
-    total_orders_count = len(all_user_orders)
+    orders_to_update = orders_ref.where('status', '!=', 'completed').stream()
 
-    pending_orders_query = orders_ref.where('user_id', '==', user_id).where('status', '==', 'pending')
-    pending_orders = pending_orders_query.get()
-    pending_orders_count = len(pending_orders)
+    for order_doc in orders_to_update:
+        order = order_doc.to_dict()
+        order_id = order_doc.id
 
-    preparing_orders_query = orders_ref.where('user_id', '==', user_id).where('status', '==', 'preparing')
-    preparing_orders = preparing_orders_query.get()
-    preparing_orders_count = len(preparing_orders)
+        status = order.get('status', 'pending')
+        est_start = order.get('estimated_start_time')
+        est_completion = order.get('estimated_completion_time')
+        total_prep_minutes = order.get('total_preparation_time', 5)
 
-    completed_orders_query = orders_ref.where('user_id', '==', user_id).where('status', '==', 'completed')
-    completed_orders = completed_orders_query.get()
-    completed_orders_count = len(completed_orders)
+        # Fallback for older docs
+        if not est_start and est_completion and total_prep_minutes:
+            est_start = est_completion - int(total_prep_minutes * 60)
 
-    user_latest_order = None
-
-    # Order by order_time desc and limit 1 for active orders (requires composite index)
-    active_user_orders_query = orders_ref.where('user_id', '==', user_id).where('status', 'in', ['pending', 'preparing']).order_by('order_time', direction=admin_firestore.Query.DESCENDING).limit(1)
-    active_user_orders_docs = active_user_orders_query.get()
-
-    if active_user_orders_docs:
-        user_latest_order = active_user_orders_docs[0].to_dict()
-        user_latest_order['id'] = active_user_orders_docs[0].id
-
-        # Normalize timestamps to epoch seconds
-        ot = user_latest_order.get('order_time')
-        ect = user_latest_order.get('estimated_completion_time')
-        if isinstance(ot, datetime):
-            user_latest_order['order_time'] = int(ot.timestamp())
-        elif isinstance(ot, (int, float)):
-            user_latest_order['order_time'] = int(ot)
-        if isinstance(ect, datetime):
-            user_latest_order['estimated_completion_time'] = int(ect.timestamp())
-        elif isinstance(ect, (int, float)):
-            user_latest_order['estimated_completion_time'] = int(ect)
-
-        print(f"get_dashboard_data: Latest active order for {user_id}: {user_latest_order}")
-    else:
-        latest_completed_order_query = orders_ref.where('user_id', '==', user_id).where('status', '==', 'completed').order_by('order_time', direction=admin_firestore.Query.DESCENDING).limit(1)
-        latest_completed_order_docs = latest_completed_order_query.get()
-        if latest_completed_order_docs:
-            user_latest_order = latest_completed_order_docs[0].to_dict()
-            user_latest_order['id'] = latest_completed_order_docs[0].id
-
-            ot = user_latest_order.get('order_time')
-            ect = user_latest_order.get('estimated_completion_time')
-            if isinstance(ot, datetime):
-                user_latest_order['order_time'] = int(ot.timestamp())
-            elif isinstance(ot, (int, float)):
-                user_latest_order['order_time'] = int(ot)
-            if isinstance(ect, datetime):
-                user_latest_order['estimated_completion_time'] = int(ect.timestamp())
-            elif isinstance(ect, (int, float)):
-                user_latest_order['estimated_completion_time'] = int(ect)
-            print(f"get_dashboard_data: Latest completed order for {user_id}: {user_latest_order}")
+        new_status = status
+        if est_completion and now >= est_completion:
+            new_status = 'completed'
+        elif est_start and now >= est_start and now < (est_completion or 9_999_999_999):
+            new_status = 'preparing'
         else:
-            print("get_dashboard_data: No active or completed order found for the user.")
+            new_status = 'pending'
 
-    people_ahead = 0
-    estimated_user_wait_time = 0
+        if new_status != status:
+            orders_ref.document(order_id).update({"status": new_status})
 
-    if user_latest_order and user_latest_order.get('status') in ['pending', 'preparing']:
-        all_active_orders_in_system_query = orders_ref.where('status', 'in', ['pending', 'preparing'])
-        all_active_orders_in_system = all_active_orders_in_system_query.get()
-
-        current_time = int(time.time())
-
-        total_prep_time_ahead = 0
-        for order_doc in all_active_orders_in_system:
-            order_data = order_doc.to_dict()
-            if order_data.get('order_time', 0) < user_latest_order.get('order_time', 0):
-                people_ahead += 1
-                total_prep_time_ahead += order_data.get('total_preparation_time', 0)
-
-        if user_latest_order.get('estimated_completion_time') is not None:
-            remaining_seconds_for_user_order = max(0, user_latest_order['estimated_completion_time'] - current_time)
-            estimated_user_wait_time = (total_prep_time_ahead * 60 + remaining_seconds_for_user_order) // 60
-        else:
-            estimated_user_wait_time = 0
-
-    print(f"Dashboard data: Total: {total_orders_count}, Pending: {pending_orders_count}, Preparing: {preparing_orders_count}, Completed: {completed_orders_count}, People Ahead: {people_ahead}, Est Wait: {estimated_user_wait_time}")
-
-    return jsonify(
-        success=True,
-        total_orders_count=total_orders_count,
-        pending_orders_count=pending_orders_count,
-        preparing_orders_count=preparing_orders_count,
-        completed_orders_count=completed_orders_count,
-        people_ahead=people_ahead,
-        estimated_user_wait_time=estimated_user_wait_time,
-        user_latest_order=user_latest_order
-    ), 200
+    return jsonify(success=True, message="Order statuses updated"), 200
 
 # --- API Endpoint to simulate order completion (for testing purposes) ---
-@app.route('/api/complete_order/<order_id>,', methods=['POST'])
+@app.route('/api/complete_order/<order_id>', methods=['POST'])
 def complete_order(order_id):
     """Simulates completing an order. This would typically be an admin action."""
     user_id = get_user_id()
