@@ -411,6 +411,17 @@ def place_order():
     total_preparation_time = sum(item.get('preparation_time', 5) for item in cart_items)
     total_price = sum(item.get('price', 0) * item.get('quantity', 1) for item in cart_items)
 
+    # --- calculate queue position ---
+    pending_orders = db.collection('orders').where("status", "==", "pending").order_by("order_time").stream()
+    pending_orders_list = list(pending_orders)
+
+    # number of orders already pending
+    people_ahead = len(pending_orders_list)
+
+    # average wait time = sum of all pending prep times
+    avg_wait_time = sum(order.to_dict().get("total_preparation_time", 0) for order in pending_orders_list)
+
+    # create new order
     order_ref = db.collection('orders').document()
     order_ref.set({
         "user_id": user_id,
@@ -419,7 +430,9 @@ def place_order():
         "total_preparation_time": total_preparation_time,
         "status": "pending",
         "order_time": int(time.time()),
-        "estimated_completion_time": int(time.time()) + total_preparation_time * 60
+        "estimated_completion_time": int(time.time()) + (avg_wait_time + total_preparation_time) * 60,
+        "people_ahead": people_ahead,
+        "avg_wait_time": avg_wait_time
     })
 
     # Clear cart
