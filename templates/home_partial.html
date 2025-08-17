@@ -1,0 +1,127 @@
+<div id="main-content" class="flex flex-col gap-8">
+    <header class="flex items-center justify-between">
+        <div>
+            <!-- Empty div for spacing, as the user profile is on the right -->
+        </div>
+        <div class="flex items-center space-x-4">
+            <img alt="User avatar" class="profile-img"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1qZQkcZbI7lW82yyM0ef-2O1MrdNXaD5rvjBYIZqtX7EhnpL8WHXjA0frBc9qERtsArknmauNuEC_r7UUmtnhcbCLpm_8pV_WcrULKlynjXvjYFUyE35DMjF5HQFzgM87-5TpdcEnqbDPFeQHKbtsKy3D_05_hAYjT5oVAvzgx6WK2PJqkRkthThEBJF02bAUlT1ouyqh4ZqtYNjwjY8a0hiB8r4KICWp4F0l09uO1PL8uTmAV8hgfHBNb8w1FYKq-vVUnUrd05U" />
+            <div>
+                <p class="text-md font-semibold text-gray-800">{{ username|capitalize }}</p>
+                <p class="text-xs text-gray-500">{{ email }}</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Live Order Monitoring Section -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 flex-wrap gap-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Live Order Monitoring</h2>
+            <p class="text-sm text-gray-500 mt-1">Track current order statuses and performance.</p>
+        </div>
+        <button
+            class="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-full shadow-md hover:bg-green-600 transition-colors duration-200"
+        >
+            <span class="material-icons text-lg">add</span>
+            <span>New Order</span>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Dashboard Cards -->
+        <div class="bg-white p-6 rounded-2xl shadow flex flex-col items-center justify-center text-center">
+            <span class="material-icons text-green-500 text-4xl mb-2">receipt</span>
+            <p class="text-sm font-medium text-gray-500">Total Orders</p>
+            <p id="total-orders-count" class="text-3xl font-bold text-gray-800 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">from last week</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow flex flex-col items-center justify-center text-center">
+            <span class="material-icons text-yellow-500 text-4xl mb-2">hourglass_empty</span>
+            <p class="text-sm font-medium text-gray-500">Pending Orders</p>
+            <p id="pending-orders-count" class="text-3xl font-bold text-gray-800 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">Currently in queue</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow flex flex-col items-center justify-center text-center">
+            <span class="material-icons text-blue-500 text-4xl mb-2">check_circle</span>
+            <p class="text-sm font-medium text-gray-500">Completed Orders</p>
+            <p id="completed-orders-count" class="text-3xl font-bold text-gray-800 mt-1">0</p>
+            <p class="text-xs text-gray-400 mt-1">Successfully served</p>
+        </div>
+
+        <!-- Speedometer Card -->
+        <div class="bg-white p-6 rounded-2xl shadow flex flex-col items-center justify-center text-center">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Your Order Status</h3>
+            <div class="relative w-[200px] h-[100px] mx-auto overflow-hidden">
+                <div class="speedometer bg-[#e0e0e0] w-full h-full rounded-t-full relative">
+                    <div id="speedometer-fill-preparing" class="speedometer-fill"></div>
+                    <div class="speedometer-overlay"></div>
+                    <div id="speedometer-needle" class="speedometer-needle"></div>
+                    <div class="speedometer-center"></div>
+                    <div class="speedometer-text">
+                        <p id="speedometer-value" class="text-2xl font-bold">0%</p>
+                        <p id="speedometer-label" class="text-xs text-gray-600">No active order</p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mt-4">People ahead: <span id="people-ahead">0</span></p>
+            <p class="text-sm text-gray-500">Est. wait time: <span id="estimated-wait-time">0 mins</span></p>
+        </div>
+    </div>
+
+    <!-- Today's Specials and Of the Day -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Today's Specials</h3>
+            <div class="space-y-4">
+                <!-- Example Special Item -->
+                <div class="flex items-center space-x-3 p-3 bg-gray-50/70 rounded-xl hover:shadow-sm transition-shadow duration-200">
+                    <img alt="Spicy Ramen Bowl" class="dish-image w-16 h-16 rounded-lg"
+                        src="https://imgs.search.brave.com/d97aVjN-TDBal3IqeJ47QMxsBokJ1-veSPzQFr_hzk0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly93d3cu/Y3Vycnl0cmFpbC5p/bi93cC1jb250ZW50/L3VwbG9hZHMvMjAx/OC8wMy9FYXN5LVNw/aWN5LVNyaXJhY2hh/LVJhbWVuLU5vb2Rs/ZXMtU291cC0yLmpw/Zw" />
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">Spicy Ramen Bowl</p>
+                        <p class="text-xs text-gray-500">New addition</p>
+                    </div>
+                    <span class="material-icons text-red-400 ml-auto text-lg">local_fire_department</span>
+                </div>
+                <div class="flex items-center space-x-3 p-3 bg-gray-50/70 rounded-xl hover:shadow-sm transition-shadow duration-200">
+                    <img alt="Avocado Smash Toast" class="dish-image w-16 h-16 rounded-lg"
+                        src="https://imgs.search.brave.com/XiZw2U4JC3c9eIJzijubS3_jufnvrRzBBsMcc_wNdKQ/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tYWxs/b3J5dGhlZGlldGl0/aWFuLmNvbS93cC1j/b250ZW50L3VwbG9h/ZHMvMjAyNC8wNS9z/bWFzaGVkLWF2b2Nh/ZG8tdG9hc3Qtd2l0/aC1lZ2ctYW5kLXJl/ZC1wZXBwZXItZmxh/a2VzLTMwMHgzMDAu/anBn" />
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">Avocado Smash Toast</p>
+                        <p class="text-xs text-gray-500">Popular choice</p>
+                    </div>
+                    <span class="material-icons text-green-400 ml-auto text-lg">favorite</span>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
+                <span>Most Favourite</span>
+                <a href="#" class="text-sm text-green-500 font-medium hover:underline">View All &rarr;</a>
+            </h3>
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3 p-3 bg-gray-50/70 rounded-xl hover:shadow-sm transition-shadow duration-200">
+                    <img alt="Berry Blast Smoothie" class="dish-image w-16 h-16 rounded-lg"
+                        src="https://imgs.search.brave.com/6w0ac_W0haDe22zDquOSLJUaDBStIqTpYT_JI78Osp8/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9wcmV2/aWV3LnJlZGQuaXQv/Ymx1ZWJlcnJ5LWJs/YXN0LWEtaGVhbHRo/eS1hbmQtZGVsaWNp/b3VzLXNtb290aGll/LXJlY2lwZS12MC1x/Y3VxeHBteHNtbmIx/LmpwZz93aWR0aD0y/MjUmZm9ybWF0PXBq/cGcmYXV0bz13ZWJw/JnM9ZTAzYjRhYmI0/YjZkNWMzZTYzMDMx/ZTMyYWIxZmJjMjU4/NzQ3NjRlYw" />
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">Berry Blast Smoothie</p>
+                        <p class="text-xs text-gray-500">120 orders</p>
+                    </div>
+                    <span class="material-icons text-yellow-500 ml-auto text-lg">emoji_events</span>
+                </div>
+                <div class="flex items-center space-x-3 p-3 bg-gray-50/70 rounded-xl hover:shadow-sm transition-shadow duration-200">
+                    <img alt="Chicken Caesar Salad" class="dish-image w-16 h-16 rounded-lg"
+                        src="https://imgs.search.brave.com/gJYDE1qJVTGlP8HqJzj4iFAX7RFDyV45aBAJJOJ7kXE/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly93d3cu/aGFpcnliaWtlcnMu/Y29tL3VwbG9hZHMv/aW1hZ2VzL19yZWNp/cGVJbWFnZS9DaGlj/a2VuLUNlYXNlci1T/YWxhZC5qcGc" />
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">Chicken Caesar Salad</p>
+                        <p class="text-xs text-gray-500">15 orders</p>
+                    </div>
+                    <span class="material-icons text-orange-400 ml-auto text-lg">star</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

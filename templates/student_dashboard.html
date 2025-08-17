@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Waitless Dashboard</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;display=swap"
+    rel="stylesheet" />
+  <style type="text/tailwindcss">
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #F0F7F6;
+    }
+    .main-container {
+      background-color: #FFFFFF;
+      border-radius: 32px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+    }
+    .sidebar-icon {
+      font-size: 22px;
+      color: #6B7280;
+      transition: color 0.3s ease;
+    }
+    .sidebar-item:hover .sidebar-icon,
+    .sidebar-item.active .sidebar-icon {
+      color: #10B981; /* Tailwind green-500 equivalent */
+    }
+    .sidebar-item.active {
+      background-color: #ECFDF5; /* Tailwind green-50 equivalent */
+      border-radius: 12px;
+      color: #10B981;
+    }
+    .profile-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #10B981;
+    }
+    .dish-image {
+      border-radius: 12px;
+      object-fit: cover;
+    }
+    /* Custom styles for speedometer */
+    .speedometer {
+        position: relative;
+        width: 200px;
+        height: 100px; /* Half circle */
+        background: #e0e0e0;
+        border-radius: 100px 100px 0 0;
+        overflow: hidden;
+    }
+    .speedometer-fill {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 200px;
+        height: 100px;
+        background: conic-gradient(from -90deg, #34d399 0%, #10b981 50%, #059669 100%);
+        border-radius: 0 0 100px 100px; /* Inverted half circle */
+        transform-origin: center top;
+        transform: rotate(0deg); /* Initial state */
+        transition: transform 0.5s ease-out;
+    }
+    .speedometer-fill-preparing {
+      background: conic-gradient(from -90deg, #34d399 0%, #10b981 50%, #059669 100%); /* Green gradient */
+    }
+
+    .speedometer-fill-completed {
+      background: conic-gradient(from -90deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%); /* Blue gradient for completed */
+    }
+    .speedometer-overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        background: #F0F7F6;
+        border-radius: 90px 90px 0 0;
+        z-index: 1;
+    }
+    .speedometer-needle {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        height: 80px;
+        background: #ef4444; /* Red */
+        transform-origin: center bottom;
+        transform: translateX(-50%) rotate(-90deg); /* Start at 0% */
+        transition: transform 0.5s ease-out;
+        z-index: 2;
+    }
+    .speedometer-center {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        background: #1f2937; /* Dark gray */
+        border-radius: 50%;
+        transform: translateX(-50%) translateY(50%);
+        z-index: 3;
+    }
+    .speedometer-text {
+        position: absolute;
+        top: 60%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 4;
+        text-align: center;
+        color: #1f2937;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white p-6 shadow-md rounded-r-3xl flex flex-col justify-between">
+      <div>
+        <div class="text-2xl font-bold text-gray-800 mb-10">Waitless</div>
+        <nav class="space-y-4">
+          <a href="#" data-page="home"
+            class="sidebar-item flex items-center space-x-3 p-3 rounded-xl transition duration-200 {% if active_page == 'dashboard' %}active{% endif %}">
+            <span class="material-icons sidebar-icon">dashboard</span>
+            <span class="font-medium">Dashboard</span>
+          </a>
+          <a href="#" data-page="menu"
+            class="sidebar-item flex items-center space-x-3 p-3 rounded-xl transition duration-200 {% if active_page == 'menu' %}active{% endif %}">
+            <span class="material-icons sidebar-icon">menu_book</span>
+            <span class="font-medium">Menu</span>
+          </a>
+          <a href="#" data-page="cart"
+            class="sidebar-item flex items-center space-x-3 p-3 rounded-xl transition duration-200 {% if active_page == 'cart' %}active{% endif %}">
+            <span class="material-icons sidebar-icon">shopping_cart</span>
+            <span class="font-medium">Cart (<span id="cart-count">0</span>)</span>
+          </a>
+          <!-- Admin Dashboard Link was here, now removed -->
+          <a href="#" data-page="help"
+            class="sidebar-item flex items-center space-x-3 p-3 rounded-xl transition duration-200 {% if active_page == 'help' %}active{% endif %}">
+            <span class="material-icons sidebar-icon">help_outline</span>
+            <span class="font-medium">Help</span>
+          </a>
+        </nav>
+      </div>
+      <div class="mt-8">
+        <button id="logout-btn"
+          class="flex items-center space-x-3 p-3 w-full text-red-500 hover:bg-red-50 transition duration-200 rounded-xl">
+          <span class="material-icons">logout</span>
+          <span class="font-medium">Log Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-8 overflow-y-auto">
+      <div class="main-container p-8 rounded-3xl shadow-lg min-h-[calc(100vh-64px)]">
+        <div id="main-content">
+          <!-- Partial content will be loaded here by JavaScript -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Custom Confirmation Modal (Hidden by default) -->
+  <div id="customConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50" style="display:none;">
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+      <p class="text-lg font-semibold mb-4 text-center">Are you sure?</p>
+      <div class="flex justify-around">
+        <button id="confirmYes" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition">Yes</button>
+        <button id="confirmNo" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition">No</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

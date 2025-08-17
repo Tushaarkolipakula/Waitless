@@ -1,0 +1,102 @@
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+    <title>Cart</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body>
+    <div class="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden" style='font-family: Manrope, "Noto Sans", sans-serif;'>
+      <div class="layout-container flex h-full grow flex-col">
+        <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f2f4f1] px-10 py-3">
+          <div class="flex items-center gap-4 text-[#131612]">
+            <div class="size-4">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="flex flex-1 justify-end gap-8">
+            <div class="flex gap-2">
+              <button
+                class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 bg-[#f2f4f1] text-[#131612] gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4"
+              >
+                <div class="size-4">
+                  <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M19.5 7L12.5 0L10 2.5L17 9.5L19.5 7ZM10.5 0.5L17.5 7.5L5.5 19.5H0.5V14.5L10.5 0.5Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </div>
+                <span class="truncate">Edit Order</span>
+              </button>
+              <button
+                class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 bg-[#f2f4f1] text-[#131612] gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4"
+              >
+                <div class="size-4">
+                  <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M10 20C4.477 20 0 15.523 0 10C0 4.477 4.477 0 10 0C15.523 0 20 4.477 20 10C20 15.523 15.523 20 10 20ZM10 18C14.411 18 18 14.411 18 10C18 5.589 14.411 2 10 2C5.589 2 2 5.589 2 10C2 14.411 5.589 18 10 18ZM9 9H5V11H9V15H11V11H15V9H11V5H9V9Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </div>
+                <span class="truncate">Add New</span>
+              </button>
+            </div>
+          </div>
+        </header>
+        <div class="flex size-full grow flex-col">
+          <div class="flex w-full flex-col gap-8 px-10 pb-10 pt-4 lg:flex-row">
+            <div class="flex flex-1 flex-col">
+              <h2 class="text-[#131612] text-2xl font-bold leading-normal tracking-[-0.015em] px-4 pb-2 pt-4">Your Cart</h2>
+              <div id="empty-cart-message" class="text-center text-gray-500 py-8" style="display: none;">
+                Your cart is empty. Add some delicious items from the menu!
+              </div>
+              <div id="cart-items-container" class="flex flex-col gap-2">
+                <!-- Cart items will be dynamically inserted here by JavaScript -->
+              </div>
+            </div>
+            <div class="flex w-full flex-col gap-4 lg:w-[360px]">
+              <h3 class="text-[#131612] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Payment Summary</h3>
+              <div class="p-4">
+                <div class="flex justify-between gap-x-6 py-2">
+                  <p class="text-[#6f816a] text-sm font-normal leading-normal">Total</p>
+                  <p id="cart-total-price" class="text-[#131612] text-sm font-normal leading-normal text-right">$0.00</p>
+                </div>
+              </div>
+              <div class="flex px-4 py-3">
+                <button
+                  id="checkout-btn"
+                  class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 flex-1 bg-[#8cd279] text-[#131612] text-base font-bold leading-normal tracking-[0.015em] transition-colors duration-200 hover:bg-[#72b461]"
+                >
+                  <span class="truncate">Place Order</span>
+                  <div class="size-4">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        fill-rule="evenodd"
+                        clip-rule="evenodd"
+                        d="M6.354 13.646L13.646 6.354L14.354 7.061L7.061 14.354L6.354 13.646ZM10 0C4.477 0 0 4.477 0 10C0 15.523 4.477 20 10 20C15.523 20 20 15.523 20 10C20 4.477 15.523 0 10 0ZM10 18C5.589 18 2 14.411 2 10C2 5.589 5.589 2 10 2C14.411 2 18 5.589 18 10C18 14.411 14.411 18 10 18Z"
+                        fill="currentColor"
+                      ></path>
+                    </svg>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

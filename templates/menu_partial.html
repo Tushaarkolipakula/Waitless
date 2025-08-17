@@ -1,0 +1,65 @@
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<div class="flex flex-col gap-6">
+    <!-- Header Row: Menu title + Search bar -->
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Menu</h2>
+            <p class="text-sm text-gray-500 mt-1">Explore our delicious offerings</p>
+        </div>
+
+        <!-- Beautified Search Bar -->
+        <div class="w-full sm:w-1/3">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="material-icons search-icon">search</span>
+                    <svg class="size-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </span>
+                <input
+                    type="text"
+                    placeholder="Search"
+                    class="block w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-[#f1f4f1] text-gray-800 placeholder:text-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm"
+                />
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Filters -->
+    <div class="flex gap-2 mb-6">
+        <button class="menu-filter bg-green-500 text-white px-4 py-2 rounded" data-category="All">All</button>
+        <button class="menu-filter px-4 py-2 rounded" data-category="Burgers">Burgers</button>
+        <button class="menu-filter px-4 py-2 rounded" data-category="Sides">Sides</button>
+        <button class="menu-filter px-4 py-2 rounded" data-category="Drinks">Drinks</button>
+        <button class="menu-filter px-4 py-2 rounded" data-category="Specials">Specials</button>
+    </div>
+
+
+    <!-- Menu Grid - Dynamic Content -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="menu-items-grid">
+        {% if menu_items %}
+            {% for item in menu_items %}
+            <div class="menu-item bg-white rounded-xl shadow-md hover:shadow-lg transition duration-300 p-4 flex flex-col items-center text-center"
+                 data-category="{{ item.category | default('All') }}" data-name="{{ item.name }}">
+                <img src="{{ item.image_url }}" alt="{{ item.name }}" class="dish-image w-full h-48 object-cover rounded-xl mb-4"/>
+                <h3 class="text-lg font-semibold text-gray-800 mt-2">{{ item.name }}</h3>
+                <p class="text-sm text-gray-500 mt-1">₹{{ "%.2f" | format(item.price / 100) }}</p>
+                <p class="text-xs text-green-600 mt-1">Avg wait: {{ item.preparation_time }} mins</p>
+                <button
+                    class="add-to-cart-btn mt-4 flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 bg-[#8cd279] text-[#131612] text-sm font-bold leading-normal w-fit"
+                    data-item-id="{{ item.id }}"
+                    data-item-name="{{ item.name }}"
+                    data-item-price="{{ item.price }}"
+                    data-item-image="{{ item.image_url }}"
+                    data-item-prep-time="{{ item.preparation_time }}"
+                >
+                    <span class="truncate">Add to Cart</span>
+                </button>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-gray-600 col-span-full">No menu items available.</p>
+        {% endif %}
+    </div>
+</div>

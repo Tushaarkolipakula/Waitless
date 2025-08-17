@@ -1,0 +1,27 @@
+<div class="flex flex-col gap-6">
+  <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+    <div class="flex flex-wrap justify-between gap-3 p-4">
+      <p class="text-[#131612] tracking-light text-[32px] font-bold leading-tight min-w-72">Your Cart</p>
+    </div>
+    <div id="cart-items-container">
+      <!-- Cart items will be dynamically loaded here by JavaScript -->
+      <p class="text-gray-600 text-center py-8" id="empty-cart-message">Your cart is empty.</p>
+    </div>
+
+    <h3 class="text-[#131612] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Payment Summary</h3>
+    <div class="p-4">
+      <div class="flex justify-between gap-x-6 py-2">
+        <p class="text-[#6f816a] text-sm font-normal leading-normal">Total</p>
+        <p class="text-[#131612] text-sm font-normal leading-normal text-right" id="cart-total-price">$0.00</p>
+      </div>
+    </div>
+    <div class="flex px-4 py-3">
+      <button
+        id="checkout-btn"
+        class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 flex-1 bg-[#8cd279] text-[#131612] text-base font-bold leading-normal tracking-[0.015em]"
+      >
+        <span class="truncate">Checkout</span>
+      </button>
+    </div>
+  </div>
+</div>
